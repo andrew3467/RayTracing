@@ -11,10 +11,19 @@
 
 using Color = vec3;
 
+inline double LinearToGamma(double n) {
+    if(n > 0) return std::sqrt(n);
+    return 0;
+}
+
 void write_color(std::ostream& out, const Color& pixelColor) {
     double r = pixelColor.x();
     double g = pixelColor.y();
     double b = pixelColor.z();
+
+    r = LinearToGamma(r);
+    g = LinearToGamma(g);
+    b = LinearToGamma(b);
 
     static const Interval intensity(0.000, 0.999);
     int rbyte = int(256 * intensity.Clamp(r));

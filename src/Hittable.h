@@ -12,9 +12,13 @@
 #include "Interval.h"
 
 
+class Material;
+
 struct HitRecord {
     Point3 Point;
     vec3 Normal;
+    std::shared_ptr<Material> Material;
+
     double T;
     bool FrontFace;
 

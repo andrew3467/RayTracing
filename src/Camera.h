@@ -9,7 +9,7 @@
 
 
 #include "Hittable.h"
-#include "Color.h"
+#include "Material.h"
 #include "Util.h"
 
 
@@ -29,7 +29,7 @@ public:
                 Color pixelColor(0.0);
                 for (int sample = 0; sample < SamplesPerPixel; ++sample) {
                     Ray r = GetRay(i,j);
-                    pixelColor += RayColor(r, world);
+                    pixelColor += RayColor(r, MaxRayDepth, world);
                 }
                 write_color(ppmImage, pixelColor * mPixelSamplesScale);
             }
@@ -45,27 +45,46 @@ private:
 
         mPixelSamplesScale = 1.0 / SamplesPerPixel;
 
+        mCenter = LookFrom;
 
-        double focalLength = 1.0;
-        double viewportHeight = 2.0;
+
+        double theta = ToRadians(VertFOV);
+        double h = std::tan(theta / 2);
+        double viewportHeight = 2.0 * h * FocusDist;
         double viewportWidth = viewportHeight * ((double)ImageWidth / ImageHeight);
 
-        mViewportU = vec3(viewportWidth, 0, 0);
-        mViewportV = vec3(0, -viewportHeight, 0);
+        w = UnitVector(LookFrom - LookAt);
+        u = UnitVector(cross(VUp, w));
+        v = cross(w, u);
+
+        mViewportU = viewportWidth * u;
+        mViewportV = viewportHeight * -v;
 
         mPixelDeltaU = mViewportU / ImageWidth;
         mPixelDeltaV = mViewportV / ImageHeight;
 
-        Point3 viewportUpperLeft = mCenter -
-                                   vec3(0, 0, focalLength) - mViewportU / 2.0 - mViewportV / 2.0;
+        Point3 viewportUpperLeft = mCenter - (FocusDist * w) - mViewportU / 2.0 - mViewportV / 2.0;
 
         mPixel00Loc = viewportUpperLeft + 0.5 * (mPixelDeltaU + mPixelDeltaV);
+
+
+        auto defocusRadius = FocusDist * std::tan(ToRadians(DefocusAngle / 2.0));
+        mDefocusDiskU = u * defocusRadius;
+        mDefocusDiskV = v * defocusRadius;
     }
 
-    Color RayColor(const Ray& r, const Hittable& world) const {
+    Color RayColor(const Ray& r, int depth, const Hittable& world) const {
+        if(depth <= 0) return Color(0.0);
+
         HitRecord rec;
-        if(world.Hit(r, Interval(0, INFINITY), rec)) {
-            return 0.5 * (rec.Normal + Color(1));
+        if(world.Hit(r, Interval(0.001, INFINITY), rec)) {
+            Ray scattered;
+            Color attenuation;
+
+            if(rec.Material->Scatter(r, rec, attenuation, scattered)) {
+                return attenuation * RayColor(scattered, depth - 1, world);
+            }
+            return Color(0.0);
         }
 
         vec3 unitDirection = UnitVector(r.Direction());
@@ -79,7 +98,7 @@ private:
                 ((x + offset.x()) * mPixelDeltaU) +
                 ((y + offset.y()) * mPixelDeltaV);
 
-        Point3 rayOrigin = mCenter;
+        Point3 rayOrigin = (DefocusAngle <= 0) ? mCenter : DefocusDiskSample();
         vec3 rayDirection = pixelSample - rayOrigin;
 
         return Ray(rayOrigin, rayDirection);
@@ -89,11 +108,25 @@ private:
         return {RandomDouble01() - 0.5, RandomDouble01() - 0.5, 0.0};
     }
 
+    vec3 DefocusDiskSample() const {
+        auto p = RandomInUnitDisk();
+        return mCenter + (p[0] * mDefocusDiskU) + (p[1] * mDefocusDiskV);
+    }
+
 
 public:
     double AspectRatio = 16.0 / 9.0;
     int ImageWidth = 400;
     int SamplesPerPixel = 10;
+    int MaxRayDepth = 10;
+
+    double VertFOV = 90;
+    Point3 LookFrom = {0,0,0};
+    Point3 LookAt = {0,0,-1};
+    vec3 VUp = {0,1,0};
+
+    double DefocusAngle = 0;
+    double FocusDist = 10;
 
 
 private:
@@ -103,5 +136,9 @@ private:
     Point3 mCenter {0.0}, mPixel00Loc;
     vec3 mPixelDeltaU, mPixelDeltaV;
     vec3 mViewportU, mViewportV;
+
+    vec3 u, v, w;
+
+    vec3 mDefocusDiskU, mDefocusDiskV;
 
 };

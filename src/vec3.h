@@ -9,6 +9,7 @@
 #include <cmath>
 #include <iostream>
 #include <ostream>
+#include "Util.h"
 
 
 class vec3 {
@@ -50,6 +51,16 @@ public:
     double LengthSquared() const {
         return e[0]*e[0] + e[1]*e[1] + e[2]*e[2];
     }
+
+    bool NearZero() const {
+        // Return true if the vector is close to zero in all dimensions.
+        auto s = 1e-8;
+        return (std::fabs(e[0]) < s) && (std::fabs(e[1]) < s) && (std::fabs(e[2]) < s);
+    }
+
+    static vec3 Random() {return {RandomDouble01(), RandomDouble01(), RandomDouble01()};}
+
+    static vec3 Random(double min, double max) {return {RandomDouble(min, max), RandomDouble(min, max), RandomDouble(min, max)};}
 
 
     double e[3];
@@ -101,4 +112,42 @@ inline vec3 cross(const vec3& u, const vec3& v) {
 
 inline vec3 UnitVector(const vec3& v) {
     return v / v.length();
+}
+
+inline vec3 RandomUnitVector() {
+    while (true) {
+        vec3 P = vec3::Random(-1.0, 1.0);
+        double lensq = P.LengthSquared();
+        //TODO: account for floating point imprecision at extreme lows
+        if(lensq <= 1) {
+            return P / sqrt(lensq);
+        }
+    }
+}
+
+inline vec3 RandomOnHemisphere(const vec3& normal) {
+    vec3 onUnitSphere = RandomUnitVector();
+    if(dot(onUnitSphere, normal) > 0.0) {
+        return onUnitSphere;
+    }else {
+        return -onUnitSphere;
+    }
+}
+
+inline vec3 RandomInUnitDisk() {
+    while (true) {
+        auto p = vec3(RandomDouble(-1, 1), RandomDouble(-1, 1), 0);
+        if(p.LengthSquared() < 1) return p;
+    }
+}
+
+inline vec3 Reflect(const vec3& v, const vec3& n) {
+    return v - 2 * dot(v, n) * n;
+}
+
+inline vec3 Refract(const vec3& uv, const vec3& n, double etaiOveretat) {
+    auto cosTheta = std::fmin(dot(-uv, n), 1.0);
+    vec3 outPerp = etaiOveretat * (uv + cosTheta * n);
+    vec3 outParallel = -std::sqrt(std::fabs(1.0 - outPerp.LengthSquared())) * n;
+    return outPerp + outParallel;
 }
