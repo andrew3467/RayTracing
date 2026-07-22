@@ -50,8 +50,8 @@ int main() {
 
     cam.AspectRatio      = 16.0 / 9.0;
     cam.ImageWidth       = 600;
-    cam.SamplesPerPixel = 20;
-    cam.MaxRayDepth         = 10;
+    cam.SamplesPerPixel = 100;
+    cam.MaxRayDepth         = 50;
 
     cam.VertFOV     = 20;
     cam.LookFrom = Point3(13,2,3);

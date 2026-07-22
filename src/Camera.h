@@ -6,6 +6,7 @@
 #pragma once
 
 #include <fstream>
+#include <thread>
 
 
 #include "Hittable.h"
@@ -18,20 +19,40 @@ public:
     void Render(const Hittable& world) {
         Init();
 
+
+
+        std::vector<Color> output(ImageHeight *ImageWidth);
+
+
+
+        std::atomic<int> nextRow{0};
+
+        unsigned int threadCount = std::thread::hardware_concurrency();
+        std::vector<std::thread> threads;
+        threads.reserve(threadCount);
+        auto thread = [&]() {
+            while (true) {
+                int y = nextRow.fetch_add(1, std::memory_order_relaxed);
+
+                if (y >= ImageHeight)
+                    return;
+
+                RenderRow(y, std::ref(world), std::ref(output));
+            }
+        };
+
+        for(int i = 0; i < threadCount; i++)
+            threads.emplace_back(thread);
+
+        for(auto& t : threads)
+            t.join();
+
         std::ofstream ppmImage("../ppmImage.ppm");
 
         ppmImage << "P3\n" << ImageWidth << ' ' << ImageHeight << "\n255\n";
-
-        for (int j = 0; j < ImageHeight; ++j) {
-            std::clog << "\rScanlines remaining: " << (ImageHeight - j) << ' ' << std::flush;
-            for (int i = 0; i < ImageWidth; ++i) {
-
-                Color pixelColor(0.0);
-                for (int sample = 0; sample < SamplesPerPixel; ++sample) {
-                    Ray r = GetRay(i,j);
-                    pixelColor += RayColor(r, MaxRayDepth, world);
-                }
-                write_color(ppmImage, pixelColor * mPixelSamplesScale);
+        for (int y = 0; y < ImageHeight; ++y) {
+            for (int x = 0; x < ImageWidth; ++x) {
+                write_color(ppmImage, output[y * ImageWidth + x] * mPixelSamplesScale);
             }
         }
 
@@ -71,6 +92,18 @@ private:
         auto defocusRadius = FocusDist * std::tan(ToRadians(DefocusAngle / 2.0));
         mDefocusDiskU = u * defocusRadius;
         mDefocusDiskV = v * defocusRadius;
+    }
+
+    void RenderRow(int y, const Hittable& world, std::vector<Color>& output) {
+        for (int x = 0; x < ImageWidth; ++x) {
+            Color pixelColor(0.0);
+            for (int sample = 0; sample < SamplesPerPixel; ++sample) {
+                Ray r = GetRay(x, y);
+                pixelColor += RayColor(r, MaxRayDepth, world);
+            }
+
+            output[y * ImageWidth + x] = pixelColor;
+        }
     }
 
     Color RayColor(const Ray& r, int depth, const Hittable& world) const {

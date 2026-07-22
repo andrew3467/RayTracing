@@ -16,8 +16,8 @@ const double PI = 3.14159265359;
 inline double ToRadians(double deg) {return deg * PI / 180.0;}
 
 inline double RandomDouble01() {
-    static std::uniform_real_distribution<double> distribution(0.0, 1.0);
-    static std::mt19937 generator;
+    static thread_local std::uniform_real_distribution<double> distribution(0.0, 1.0);
+    static thread_local std::mt19937 generator;
     return distribution(generator);
 }
 
