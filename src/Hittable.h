@@ -10,6 +10,7 @@
 
 #include "Ray.h"
 #include "Interval.h"
+#include "util/AABB.h"
 
 
 class Material;
@@ -20,6 +21,7 @@ struct HitRecord {
     std::shared_ptr<Material> Material;
 
     double T;
+    double U, V;
     bool FrontFace;
 
     void SetFaceNormal(const Ray& r, const vec3& outwardNormal) {
@@ -33,6 +35,7 @@ public:
     virtual ~Hittable() = default;
 
     virtual bool Hit(const Ray& r, Interval interval, HitRecord& rec) const = 0;
+    virtual AABB BoundingBox() const = 0;
 };
 
 
@@ -43,7 +46,10 @@ public:
 
     void clear() {Objects.clear();}
 
-    void Add(std::shared_ptr<Hittable> object) {Objects.push_back(object);}
+    void Add(std::shared_ptr<Hittable> object) {
+        Objects.push_back(object);
+        mBounds = AABB(mBounds, object->BoundingBox());
+    }
 
     virtual bool Hit(const Ray& r, Interval interval, HitRecord& rec) const override {
         HitRecord record;
@@ -61,6 +67,14 @@ public:
         return hit;
     }
 
+    AABB BoundingBox() const override {return mBounds;}
 
+
+
+public:
     std::vector<std::shared_ptr<Hittable>> Objects;
+
+private:
+    ///World bounding box
+    AABB mBounds;
 };

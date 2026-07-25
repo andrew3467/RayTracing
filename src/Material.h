@@ -7,6 +7,8 @@
 
 #include "Hittable.h"
 #include "Color.h"
+#include "Texture.h"
+
 
 struct Material {
     virtual ~Material() = default;
@@ -16,23 +18,29 @@ struct Material {
             ) const {
         return false;
     }
+
+
+    virtual Color Emitted(double u, double v, const Point3& p) const {
+        return {0, 0, 0};
+    }
 };
 
 struct Lambertian : public Material {
-    Lambertian(const Color& albedo) : Albedo(albedo) {}
+    Lambertian(const Color& albedo) : Texture(std::make_shared<TextureSolid>(albedo)) {}
+    Lambertian(const std::shared_ptr<Texture>& tex) : Texture(tex) {}
 
     bool Scatter(const Ray& rayIn, const HitRecord& rec, Color& attenuation, Ray& scattered) const override {
         vec3 scatterDirection = rec.Normal + RandomUnitVector();
 
         if(scatterDirection.NearZero()) scatterDirection = rec.Normal;
 
-        scattered = Ray(rec.Point, scatterDirection);
-        attenuation = Albedo;
+        scattered = Ray(rec.Point, scatterDirection, rayIn.Time());
+        attenuation = Texture->Value(rec.U, rec.V, rec.Point);
         return true;
     }
 
 
-    Color Albedo;
+    std::shared_ptr<Texture> Texture;
 };
 
 struct Metal : public Material {
@@ -41,7 +49,7 @@ struct Metal : public Material {
     bool Scatter(const Ray& rayIn, const HitRecord& rec, Color& attenuation, Ray& scattered) const override {
         vec3 reflected = Reflect(rayIn.Direction(), rec.Normal);
         reflected = UnitVector(reflected) + (Fuzz * RandomUnitVector());
-        scattered = Ray(rec.Point, reflected);
+        scattered = Ray(rec.Point, reflected, rayIn.Time());
         attenuation = Albedo;
         return dot(scattered.Direction(), rec.Normal) > 0;
     }
@@ -69,7 +77,7 @@ struct Dielectric : public Material {
         else
             direction = Refract(unitDirection, rec.Normal, ri);
 
-        scattered = Ray(rec.Point, direction);
+        scattered = Ray(rec.Point, direction, rayIn.Time());
         return true;
     }
 
@@ -82,4 +90,20 @@ struct Dielectric : public Material {
 
         return r0 + (1 - r0) * std::pow((1 - cosine), 5);
     }
+};
+
+
+
+class DiffuseLight : public Material {
+public:
+    DiffuseLight(std::shared_ptr<Texture>& tex) : mTexture(tex) {}
+    DiffuseLight(const Color& emit) : mTexture(std::make_shared<TextureSolid>(emit)) {}
+
+    Color Emitted(double u, double v, const Point3& p) const override {
+        return mTexture->Value(u, v, p);
+    }
+
+
+private:
+    std::shared_ptr<Texture> mTexture;
 };

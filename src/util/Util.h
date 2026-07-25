@@ -24,3 +24,9 @@ inline double RandomDouble01() {
 inline double RandomDouble(double min, double max) {
     return min + (max - min) * RandomDouble01();
 }
+
+inline int RandomInt(int min, int max) {
+    thread_local std::mt19937 generator;
+    thread_local std::uniform_int_distribution<int> distribution(min, max);
+    return distribution(generator);
+}

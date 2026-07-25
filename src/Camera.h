@@ -11,7 +11,7 @@
 
 #include "Hittable.h"
 #include "Material.h"
-#include "Util.h"
+#include "util/Util.h"
 
 
 class Camera {
@@ -23,8 +23,12 @@ public:
 
         std::vector<Color> output(ImageHeight *ImageWidth);
 
+#if 0
+        for (int i = 0; i < ImageHeight; ++i) {
+            RenderRow(i, world, output);
+        }
 
-
+#else
         std::atomic<int> nextRow{0};
 
         unsigned int threadCount = std::thread::hardware_concurrency();
@@ -41,11 +45,13 @@ public:
             }
         };
 
+
         for(int i = 0; i < threadCount; i++)
             threads.emplace_back(thread);
 
         for(auto& t : threads)
             t.join();
+#endif
 
         std::ofstream ppmImage("../ppmImage.ppm");
 
@@ -104,25 +110,27 @@ private:
 
             output[y * ImageWidth + x] = pixelColor;
         }
+
+        std::clog << "Rendered Row: " << y << std::endl << std::flush;
     }
 
     Color RayColor(const Ray& r, int depth, const Hittable& world) const {
         if(depth <= 0) return Color(0.0);
 
         HitRecord rec;
-        if(world.Hit(r, Interval(0.001, INFINITY), rec)) {
-            Ray scattered;
-            Color attenuation;
+        if(!world.Hit(r, Interval(0.001, INFINITY), rec)) return Background;
 
-            if(rec.Material->Scatter(r, rec, attenuation, scattered)) {
-                return attenuation * RayColor(scattered, depth - 1, world);
-            }
-            return Color(0.0);
-        }
 
-        vec3 unitDirection = UnitVector(r.Direction());
-        auto a = 0.5*(unitDirection.y() + 1.0);
-        return (1.0 - a) * Color(1.0) + a * Color(0.5, 0.7, 1.0);
+        Ray scattered;
+        Color attenuation;
+        Color emissionColor = rec.Material->Emitted(rec.U, rec.V, rec.Point);
+
+
+        if(!rec.Material->Scatter(r, rec, attenuation, scattered))  return emissionColor;
+
+        Color scatterColor = attenuation * RayColor(scattered, depth - 1, world);
+        //Color scatterColor = attenuation * bounced;
+        return emissionColor + scatterColor;
     }
 
     Ray GetRay(int x, int y) {
@@ -133,8 +141,9 @@ private:
 
         Point3 rayOrigin = (DefocusAngle <= 0) ? mCenter : DefocusDiskSample();
         vec3 rayDirection = pixelSample - rayOrigin;
+        double rayTime = RandomDouble01();
 
-        return Ray(rayOrigin, rayDirection);
+        return Ray(rayOrigin, rayDirection, rayTime);
     }
 
     vec3 SampleSquare() {
@@ -152,6 +161,7 @@ public:
     int ImageWidth = 400;
     int SamplesPerPixel = 10;
     int MaxRayDepth = 10;
+    Color Background;
 
     double VertFOV = 90;
     Point3 LookFrom = {0,0,0};

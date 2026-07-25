@@ -6,7 +6,7 @@
 #pragma once
 
 
-#include "vec3.h"
+#include "util/vec3.h"
 
 
 using Color = vec3;
