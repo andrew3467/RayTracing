@@ -3,7 +3,7 @@
 #include "Camera.h"
 #include "Sphere.h"
 #include "BvhNode.h"
-#include "quad.h"
+#include "Quad.h"
 
 
 void BouncingSpheres() {
@@ -232,6 +232,16 @@ void CornellBox() {
     world.Add(std::make_shared<Quad>(Point3(555,555,555), vec3(-555,0,0), vec3(0,0,-555), white));
     world.Add(std::make_shared<Quad>(Point3(0,0,555), vec3(555,0,0), vec3(0,555,0), white));
 
+    std::shared_ptr<Hittable> box1 = Box(Point3(0), Point3(165, 330, 165), white);
+    box1 = std::make_shared<RotateY>(box1, 15);
+    box1 = std::make_shared<Translate>(box1, vec3(265, 0, 295));
+    world.Add(box1);
+
+    std::shared_ptr<Hittable> box2 = Box(Point3(0), Point3(165, 165, 165), white);
+    box2 = std::make_shared<RotateY>(box2, -18);
+    box2 = std::make_shared<Translate>(box2, vec3(130, 0, 65));
+    world.Add(box2);
+
     Camera cam;
 
     cam.AspectRatio      = 1.0;
@@ -253,7 +263,7 @@ void CornellBox() {
 
 
 int main() {
-    int renderTarget = 6;
+    int renderTarget = 7;
 
 
     switch(renderTarget) {

@@ -96,3 +96,20 @@ public:
 
 const AABB AABB::Empty    = AABB(Interval::Empty,    Interval::Empty,    Interval::Empty);
 const AABB AABB::Universe = AABB(Interval::Universe, Interval::Universe, Interval::Universe);
+
+
+AABB operator+(const AABB& bound, const vec3& offset) {
+    return {
+            bound.X + offset.x(),
+            bound.Y + offset.y(),
+            bound.Z + offset.z(),
+    };
+}
+
+AABB operator+(const vec3& offset, const AABB& bound) {
+    return {
+            bound.X + offset.x(),
+            bound.Y + offset.y(),
+            bound.Z + offset.z(),
+    };
+}

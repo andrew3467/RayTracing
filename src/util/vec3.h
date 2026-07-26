@@ -151,3 +151,19 @@ inline vec3 Refract(const vec3& uv, const vec3& n, double etaiOveretat) {
     vec3 outParallel = -std::sqrt(std::fabs(1.0 - outPerp.LengthSquared())) * n;
     return outPerp + outParallel;
 }
+
+inline Point3 Min(const Point3& a, const Point3& b) {
+    return {
+            std::fmin(a.x(), b.x()),
+            std::fmin(a.y(), b.y()),
+            std::fmin(a.z(), b.z())
+    };
+}
+
+inline Point3 Max(const Point3& a, const Point3& b) {
+    return {
+            std::fmax(a.x(), b.x()),
+            std::fmax(a.y(), b.y()),
+            std::fmax(a.z(), b.z())
+    };
+}

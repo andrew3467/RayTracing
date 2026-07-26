@@ -40,3 +40,17 @@ struct Interval {
 
 const Interval Interval::Empty = Interval(+INFINITY, -INFINITY);
 const Interval Interval::Universe = Interval(-INFINITY, +INFINITY);
+
+Interval operator+(const Interval& ival, double dis) {
+    return {
+            ival.Min + dis,
+            ival.Max + dis
+    };
+}
+
+Interval operator+(double dis, const Interval& ival) {
+    return {
+            ival.Min + dis,
+            ival.Max + dis
+    };
+}

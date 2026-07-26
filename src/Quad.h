@@ -76,3 +76,25 @@ private:
     vec3 Normal;
     double D;
 };
+
+
+
+inline std::shared_ptr<HittableList> Box(const Point3& a, const Point3& b, std::shared_ptr<Material> mat) {
+    auto sides = std::make_shared<HittableList>();
+
+    auto min = Min(a, b);
+    auto max = Max(a, b);
+
+    auto dx = vec3(max.x() - min.x(), 0, 0);
+    auto dy = vec3(0, max.y() - min.y(), 0);
+    auto dz = vec3(0, 0, max.z() - min.z());
+
+    sides->Add(std::make_shared<Quad>(Point3(min.x(), min.y(), max.z()),  dx,  dy, mat)); // front
+    sides->Add(std::make_shared<Quad>(Point3(max.x(), min.y(), max.z()), -dz,  dy, mat)); // right
+    sides->Add(std::make_shared<Quad>(Point3(max.x(), min.y(), min.z()), -dx,  dy, mat)); // back
+    sides->Add(std::make_shared<Quad>(Point3(min.x(), min.y(), min.z()),  dz,  dy, mat)); // left
+    sides->Add(std::make_shared<Quad>(Point3(min.x(), max.y(), max.z()),  dx, -dz, mat)); // top
+    sides->Add(std::make_shared<Quad>(Point3(min.x(), min.y(), min.z()),  dx,  dz, mat)); // bottom
+
+    return sides;
+}

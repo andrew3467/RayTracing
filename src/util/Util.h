@@ -10,8 +10,11 @@
 #include <cstdlib>
 #include <random>
 
+#include "vec3.h"
+
 
 const double PI = 3.14159265359;
+
 
 inline double ToRadians(double deg) {return deg * PI / 180.0;}
 
