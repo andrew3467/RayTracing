@@ -1,10 +1,16 @@
 #include <iostream>
 
+
+#include <cuda_runtime.h>
+
+
 #include "Camera.h"
 #include "Sphere.h"
 #include "BvhNode.h"
 #include "Quad.h"
 #include "Mediums.h"
+
+#include "gpu/Add.h"
 
 
 void BouncingSpheres() {
@@ -384,11 +390,19 @@ void MultipleTextured(int image_width, int samples_per_pixel, int max_depth) {
     cam.Render(world);
 }
 
+void CudaTest() {
+    CudaAddTest(256);
+}
+
+
+
+
 int main() {
-    int renderTarget = 91;
+    int renderTarget = 0;
 
 
     switch(renderTarget) {
+        case 0: CudaTest(); break;
         case 1: BouncingSpheres(); break;
         case 2: CheckeredSpheres(); break;
         case 3: Earth(); break;
@@ -397,9 +411,9 @@ int main() {
         case 6: SimpleLight(); break;
         case 7: CornellBox(); break;
         case 8: CornellSmoke(); break;
-        case 9: MultipleTextured(800, 10000, 40); break;
+        case 9: MultipleTextured(800, 10000, 4); break;
 
 
-        default: MultipleTextured(400, 250, 4); break;
+        default: MultipleTextured(400, 1000, 4); break;
     }
 }
