@@ -82,7 +82,7 @@ private:
 
 class Translate : public Hittable {
 public:
-    Translate(std::shared_ptr<Hittable>& obj, const vec3& offset) : mObject(obj), mOffset(offset) {
+    Translate(std::shared_ptr<Hittable> obj, const vec3& offset) : mObject(obj), mOffset(offset) {
         mBounds = mObject->BoundingBox() + mOffset;
     }
 

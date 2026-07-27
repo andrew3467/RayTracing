@@ -4,6 +4,7 @@
 #include "Sphere.h"
 #include "BvhNode.h"
 #include "Quad.h"
+#include "Mediums.h"
 
 
 void BouncingSpheres() {
@@ -260,10 +261,131 @@ void CornellBox() {
     cam.Render(world);
 }
 
+void CornellSmoke() {
+    HittableList world;
 
+    auto red   = std::make_shared<Lambertian>(Color(.65, .05, .05));
+    auto white = std::make_shared<Lambertian>(Color(.73, .73, .73));
+    auto green = std::make_shared<Lambertian>(Color(.12, .45, .15));
+    auto light = std::make_shared<DiffuseLight>(Color(7, 7, 7));
+
+    world.Add(std::make_shared<Quad>(Point3(555,0,0), vec3(0,555,0), vec3(0,0,555), green));
+    world.Add(std::make_shared<Quad>(Point3(0,0,0), vec3(0,555,0), vec3(0,0,555), red));
+    world.Add(std::make_shared<Quad>(Point3(113,554,127), vec3(330,0,0), vec3(0,0,305), light));
+    world.Add(std::make_shared<Quad>(Point3(0,555,0), vec3(555,0,0), vec3(0,0,555), white));
+    world.Add(std::make_shared<Quad>(Point3(0,0,0), vec3(555,0,0), vec3(0,0,555), white));
+    world.Add(std::make_shared<Quad>(Point3(0,0,555), vec3(555,0,0), vec3(0,555,0), white));
+
+    std::shared_ptr<Hittable> box1 = Box(Point3(0,0,0), Point3(165,330,165), white);
+    box1 = std::make_shared<RotateY>(box1, 15);
+    box1 = std::make_shared<Translate>(box1, vec3(265,0,295));
+
+    std::shared_ptr<Hittable> box2 = Box(Point3(0,0,0), Point3(165,165,165), white);
+    box2 = std::make_shared<RotateY>(box2, -18);
+    box2 = std::make_shared<Translate>(box2, vec3(130,0,65));
+
+    world.Add(std::make_shared<ConstantMedium>(box1, 0.01, Color(0,0,0)));
+    world.Add(std::make_shared<ConstantMedium>(box2, 0.01, Color(1,1,1)));
+
+    Camera cam;
+
+    cam.AspectRatio      = 1.0;
+    cam.ImageWidth       = 600;
+    cam.SamplesPerPixel = 200;
+    cam.MaxRayDepth         = 50;
+    cam.Background        = Color(0,0,0);
+
+    cam.VertFOV     = 40;
+    cam.LookFrom = Point3(278, 278, -800);
+    cam.LookAt   = Point3(278, 278, 0);
+    cam.VUp      = vec3(0,1,0);
+
+    cam.DefocusAngle = 0;
+
+    cam.Render(world);
+}
+
+void MultipleTextured(int image_width, int samples_per_pixel, int max_depth) {
+    HittableList boxes1;
+    auto ground = std::make_shared<Lambertian>(Color(0.48, 0.83, 0.53));
+
+    int boxes_per_side = 20;
+    for (int i = 0; i < boxes_per_side; i++) {
+        for (int j = 0; j < boxes_per_side; j++) {
+            auto w = 100.0;
+            auto x0 = -1000.0 + i*w;
+            auto z0 = -1000.0 + j*w;
+            auto y0 = 0.0;
+            auto x1 = x0 + w;
+            auto y1 = RandomDouble(1,101);
+            auto z1 = z0 + w;
+
+            boxes1.Add(Box(Point3(x0,y0,z0), Point3(x1,y1,z1), ground));
+        }
+    }
+
+    HittableList world;
+
+    world.Add(std::make_shared<BvHNode>(boxes1));
+
+    auto light = std::make_shared<DiffuseLight>(Color(7, 7, 7));
+    world.Add(std::make_shared<Quad>(Point3(123,554,147), vec3(300,0,0), vec3(0,0,265), light));
+
+    auto center1 = Point3(400, 400, 200);
+    auto center2 = center1 + vec3(30,0,0);
+    auto sphere_material = std::make_shared<Lambertian>(Color(0.7, 0.3, 0.1));
+    world.Add(std::make_shared<Sphere>(center1, center2, 50, sphere_material));
+
+    world.Add(std::make_shared<Sphere>(Point3(260, 150, 45), 50, std::make_shared<Dielectric>(1.5)));
+    world.Add(std::make_shared<Sphere>(
+            Point3(0, 150, 145), 50, std::make_shared<Metal>(Color(0.8, 0.8, 0.9), 1.0)
+    ));
+
+    auto boundary = std::make_shared<Sphere>(Point3(360,150,145), 70, std::make_shared<Dielectric>(1.5));
+    world.Add(boundary);
+    world.Add(std::make_shared<ConstantMedium>(boundary, 0.2, Color(0.2, 0.4, 0.9)));
+    boundary = std::make_shared<Sphere>(Point3(0,0,0), 5000, std::make_shared<Dielectric>(1.5));
+    world.Add(std::make_shared<ConstantMedium>(boundary, .0001, Color(1,1,1)));
+
+    auto emat = std::make_shared<Lambertian>(std::make_shared<TextureImage>("earthmap.jpg"));
+    world.Add(std::make_shared<Sphere>(Point3(400,200,400), 100, emat));
+    auto pertext = std::make_shared<TextureNoise>(0.2);
+    world.Add(std::make_shared<Sphere>(Point3(220,280,300), 80, std::make_shared<Lambertian>(pertext)));
+
+    HittableList boxes2;
+    auto white = std::make_shared<Lambertian>(Color(.73, .73, .73));
+    int ns = 1000;
+    for (int j = 0; j < ns; j++) {
+        boxes2.Add(std::make_shared<Sphere>(Point3::Random(0,165), 10, white));
+    }
+
+    world.Add(std::make_shared<Translate>(
+                      std::make_shared<RotateY>(
+                              std::make_shared<BvHNode>(boxes2), 15),
+                      vec3(-100,270,395)
+              )
+    );
+
+    Camera cam;
+
+    cam.AspectRatio      = 1.0;
+    cam.ImageWidth       = image_width;
+    cam.SamplesPerPixel = samples_per_pixel;
+    cam.MaxRayDepth         = max_depth;
+    cam.Background        = Color(0,0,0);
+
+    cam.VertFOV     = 40;
+    cam.LookFrom = Point3(478, 278, -600);
+    cam.LookAt   = Point3(278, 278, 0);
+    cam.VUp      = vec3(0,1,0);
+
+    cam.DefocusAngle = 0;
+
+    cam.Render(world);
+}
 
 int main() {
-    int renderTarget = 7;
+    int renderTarget = 91;
 
 
     switch(renderTarget) {
@@ -274,5 +396,10 @@ int main() {
         case 5: Quads(); break;
         case 6: SimpleLight(); break;
         case 7: CornellBox(); break;
+        case 8: CornellSmoke(); break;
+        case 9: MultipleTextured(800, 10000, 40); break;
+
+
+        default: MultipleTextured(400, 250, 4); break;
     }
 }
